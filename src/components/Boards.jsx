@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useRecoilValue } from 'recoil';
+import { kanbanState } from '../recoil/atom'; // Recoil 상태 불러오기
 import BoardDetailModal from './BoardDetailModal';
 
 const typeToKorean = (type) => {
@@ -21,8 +23,10 @@ const typeToKorean = (type) => {
 //filteredData에 할당된 data를 필터링 하세요.
 //이후 Recoil의 useRecoilValue를 이용하여 Recoil의 상태를 가져오도록 수정합니다.
 
-const Boards = ({ type, data }) => {
-  const filteredData = data;
+const Boards = ({ type }) => {
+  const data = useRecoilValue(kanbanState); // 전역 상태에서 데이터 가져오기
+  const filteredData = data.filter((item) => item.type === type); // type별 필터링
+
   const [item, setItem] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
