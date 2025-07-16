@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useRecoilValue } from 'recoil';
-import { kanbanState } from '../recoil/atom'; // Recoil 상태 불러오기
 import BoardDetailModal from './BoardDetailModal';
+import BoardConfirmModal from './BoardConfirmModal';
+import BoardEditModal from './BoardEditModal'; // 수정 모달 import
+import useBoardStore from '../store';
 
 const typeToKorean = (type) => {
   switch (type) {
@@ -16,28 +17,56 @@ const typeToKorean = (type) => {
   }
 };
 
-//기존 Boards 컴포넌트에서 Data를 MockData를 Props를 받고 이용하는 형태로 구성되어 있습니다.
-//이를 Recoil을 이용하여 상태관리를 하도록 변경합니다.
-//data props 항목을 삭제합니다.
-//데이터를 type에 따라 필터링하여 각 칸반보드에서 사용해야 합니다. type은 prop로 전달되고 있습니다.
-//filteredData에 할당된 data를 필터링 하세요.
-//이후 Recoil의 useRecoilValue를 이용하여 Recoil의 상태를 가져오도록 수정합니다.
-
 const Boards = ({ type }) => {
-  const data = useRecoilValue(kanbanState); // 전역 상태에서 데이터 가져오기
-  const filteredData = data.filter((item) => item.type === type); // type별 필터링
+  const data = useBoardStore((state) => state.data);
+  const removeBoard = useBoardStore((state) => state.removeBoard);
 
-  const [item, setItem] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const filteredData = data.filter((item) => item.type === type);
 
-  const handleModalOpen = (item) => {
-    setItem(item);
-    setIsOpen(true);
+  const [detailItem, setDetailItem] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [targetId, setTargetId] = useState(null);
+
+  const [isEditOpen, setIsEditOpen] = useState(false); // 수정 모달 상태
+
+  const openDetail = (item) => {
+    setDetailItem(item);
+    setIsDetailOpen(true);
   };
 
-  const handleModalClose = () => {
-    setItem(null);
-    setIsOpen(false);
+  const closeDetail = () => {
+    setDetailItem(null);
+    setIsDetailOpen(false);
+  };
+
+  // 상세 모달 내 삭제 버튼 클릭 시
+  const openConfirm = (id) => {
+    setTargetId(id);
+    setIsConfirmOpen(true);
+    setIsDetailOpen(false); // 상세 모달 닫기
+  };
+
+  const closeConfirm = () => {
+    setTargetId(null);
+    setIsConfirmOpen(false);
+  };
+
+  const handleDelete = () => {
+    removeBoard(targetId);
+    closeConfirm();
+  };
+
+  // 수정 모달 열기
+  const handleEditModalOpen = () => {
+    setIsEditOpen(true);
+    setIsDetailOpen(false); // 상세 모달 닫기
+  };
+
+  // 수정 모달 닫기
+  const handleEditModalClose = () => {
+    setIsEditOpen(false);
   };
 
   return (
@@ -48,21 +77,49 @@ const Boards = ({ type }) => {
       <div className="flex flex-col gap-2 p-4">
         {filteredData.map((item) => (
           <div
-            onClick={() => handleModalOpen(item)}
             key={item.id}
-            className="bg-white hover:bg-stone-100 shadow-md rounded-md p-4 cursor-pointer"
+            onClick={() => openDetail(item)}
+            className="bg-white hover:bg-stone-100 shadow-md rounded-md p-4 cursor-pointer flex items-center justify-between"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <h3 className="text-lg font-semibold">{item.title}</h3>
-              {item.type === 'todo' && <div className="animate-pulse w-2 h-2 rounded-full bg-green-500"></div>}
-              {item.type === 'inprogress' && <div className="animate-pulse w-2 h-2 rounded-full bg-amber-500"></div>}
-              {item.type === 'done' && <div className="animate-pulse w-2 h-2 rounded-full bg-red-500"></div>}
+              {item.type === 'todo' && (
+                <div className="animate-pulse w-2 h-2 rounded-full bg-green-500"></div>
+              )}
+              {item.type === 'inprogress' && (
+                <div className="animate-pulse w-2 h-2 rounded-full bg-amber-500"></div>
+              )}
+              {item.type === 'done' && (
+                <div className="animate-pulse w-2 h-2 rounded-full bg-red-500"></div>
+              )}
             </div>
-            <p className="text-sm text-gray-500">{item.created_at}</p>
           </div>
         ))}
       </div>
-      {isOpen && <BoardDetailModal onClose={handleModalClose} item={item} />}
+
+      {isDetailOpen && (
+        <BoardDetailModal
+          item={detailItem}
+          onClose={closeDetail}
+          onDelete={() => openConfirm(detailItem.id)}
+          onEdit={handleEditModalOpen}  
+        />
+      )}
+
+      {isConfirmOpen && (
+        <BoardConfirmModal
+          id={targetId}
+          onClose={closeConfirm}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {isEditOpen && (
+        <BoardEditModal
+          item={detailItem}
+          onClose={handleEditModalClose}
+        />
+      )}
     </div>
   );
 };
